@@ -140,7 +140,7 @@ defmodule AOC.Solutions.Day3 do
   defp next_spiral_num_helper(mat, {x, y}, dirs = {_d, [{x_delta, y_delta} | _nd]}, curr_step, max_step, min_num, _cm) do
     # find the next location and value
     next_loc = {x + x_delta, y + y_delta}
-    next_num = sum_adj(mat, next_loc)
+    next_num = AOC.Util.Map.sum_adj_mat(mat, next_loc)
 
     # make recursive call with updated matrix and additional step
     next_spiral_num_helper(
@@ -152,17 +152,5 @@ defmodule AOC.Solutions.Day3 do
       min_num,
       next_num
     )
-  end
-
-  # sum_adj gets the sum of all the adjacent values
-  # of a location in a matrix (stored as a map)
-  @spec sum_adj(map(), {integer(), integer()}) :: integer()
-  defp sum_adj(mat, {x, y}) do
-    nums =
-      for x_delta <- -1..1,
-          y_delta <- -1..1,
-          do: Map.get(mat, {x + x_delta, y + y_delta}, 0)
-
-    Enum.sum(nums)
   end
 end

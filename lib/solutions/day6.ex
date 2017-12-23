@@ -91,7 +91,7 @@ defmodule AOC.Solutions.Day6 do
   In the example above, 2 4 1 2 is seen again after four cycles, and so the answer
   in that example would be 4.
 
-  Combingin them the output is {steps, loop_size}.
+  Combining them the output is {steps, loop_size}.
 
   ## Examples
 
