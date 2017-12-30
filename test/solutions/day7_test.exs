@@ -38,7 +38,7 @@ defmodule AOC.Solutions.Day7Test do
                                                     "ugml (68) -> gyxo, ebii, jptl",
                                                     "gyxo (61)",
                                                     "cntj (57)",
-                                                  ]) == {251, 243}
+                                                  ]) == {68, 60}
     end
   end
 end

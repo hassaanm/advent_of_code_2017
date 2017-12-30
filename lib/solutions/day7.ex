@@ -133,11 +133,76 @@ defmodule AOC.Solutions.Day7 do
   ## Examples
 
       iex> AOC.Solutions.Day7.find_weight_imbalance ["pbga (66)", "xhth (57)", "ebii (61)", "havc (66)", "ktlj (57)", "fwft (72) -> ktlj, cntj, xhth", "qoyq (66)", "padx (45) -> pbga, havc, qoyq", "tknk (41) -> ugml, padx, fwft", "jptl (61)", "ugml (68) -> gyxo, ebii, jptl", "gyxo (61)", "cntj (57)"]
-      {251, 243}
+      {68, 60}
 
   """
   @spec find_weight_imbalance([String.t]) :: {integer(), integer()}
   def find_weight_imbalance(towers) when is_list(towers) do
-    {0, 0}
+    bottom = find_bottom_tower towers
+
+    weight_graph =
+      towers
+      |> Enum.map(&(if String.contains?(&1, "->"), do: &1, else: &1 <> " -> ")) # ensure all towers have "->"
+      |> Enum.map(&(String.split(&1, " -> ")))                                  # map to tower and stacks pairs
+      |> Enum.map(fn [tower, stack] ->                                          # convert to tuple of weight
+           [name, weight] = String.split(tower)                                 # and stack list
+           weight_num = Regex.run(~r{\d+}, weight) |> List.first() |> String.to_integer()
+           stack_list = String.split(stack, ", ", trim: true)
+           {name, {weight_num, stack_list}}
+         end)
+      |> Enum.into(%{})                                                         # put into map
+
+    {balance, weights} = fwi_helper(Map.get(weight_graph, bottom), weight_graph)
+
+    # fwi_helper should either find the imbalance or
+    # the imbalance is at the bottom tower, in which
+    # case we have to determine the imbalance
+    if balance == :imbalanced do
+      weights
+    else
+      {_, ws} = weights
+      weight_counts = Enum.reduce(ws, %{}, fn {_, w}, m -> Map.update(m, w, 1, &(&1 + 1)) end)
+      {imb_weight, _} = Enum.min_by(weight_counts, fn {_, x} -> x end)
+      {bal_weight, _} = Enum.max_by(weight_counts, fn {_, x} -> x end)
+      {imb_tower_weight, _} = Enum.find(ws, fn {_, x} -> x == imb_weight end)
+      {imb_tower_weight, imb_tower_weight + bal_weight - imb_weight}
+    end
+  end
+
+  @spec fwi_helper({integer(), [String.t]}, map()) :: {atom(), any()}
+  defp fwi_helper({weight, []}, _), do: {:balanced, {weight, weight}}
+  defp fwi_helper({weight, stack}, weight_graph) do
+    # make recursive calls to find weights
+    balance_info =
+      stack
+      |> Enum.map(&(fwi_helper(Map.get(weight_graph, &1), weight_graph)))
+
+    cond do
+      # if imbalance exists in recursive calls, return it
+      imb = Enum.find(balance_info, fn {b, _} -> b == :imbalanced end) ->
+        imb
+
+      # if imbalance has been found but not calculated, calculate it and return it
+      find_imb = Enum.find(balance_info, fn {b, _} -> b == :find_imbalance end) ->
+        # find the expected weight
+        {_, {_, exp_weight}} = Enum.find(balance_info, fn {b, _} -> b == :balanced end)
+
+        # find the imbalanced tower
+        {_, {w, w_list}} = find_imb
+        w_list_size = Enum.count(w_list)
+        {imb_tower_weight, imb_weight} = Enum.find(w_list, fn {_, x} -> x * w_list_size != exp_weight - w end)
+        {_, bal_weight} = Enum.find(w_list, fn {_, x} -> x * w_list_size == exp_weight - w end)
+
+        {:imbalanced, {imb_tower_weight, imb_tower_weight + bal_weight - imb_weight}}
+
+      # if everything is balanced, calculate the total weight and return it
+      balance_info |> Enum.uniq_by(fn {_, {_, w}} -> w end) |> Enum.count() == 1 ->
+        {:balanced, {weight, weight + Enum.reduce(balance_info, 0, fn {_, {_, w}}, acc -> w + acc end)}}
+
+      # otherwise, we have found the imbalance
+      # it needs to be calculated at the next level to account for 2 sub tower case
+      true ->
+        {:find_imbalance, {weight, Enum.map(balance_info, fn {_, w} -> w end)}}
+    end
   end
 end
